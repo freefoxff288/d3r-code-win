@@ -44,8 +44,10 @@ jobs:
       - name: Smoke test (окно, загрузка QML, выход через 8 с)
         shell: pwsh
         run: |
-          $p = Start-Process dist/D3RCode/D3RCode.exe -ArgumentList '--smoke' -PassThru
+          $env:QT_FORCE_STDERR_LOGGING = '1'
+          $p = Start-Process dist/D3RCode/D3RCode.exe -ArgumentList '--smoke' -PassThru -NoNewWindow -RedirectStandardError smoke.txt
           if (-not $p.WaitForExit(90000)) { $p.Kill(); throw "не закрылся за 90 с" }
+          Get-Content smoke.txt -Encoding utf8
           if ($p.ExitCode -ne 0) { throw "код выхода $($p.ExitCode)" }
       - name: Zip
         shell: pwsh
