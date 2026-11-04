@@ -65,7 +65,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
-            libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libfuse2 clangd clang-format
+            libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libfuse2 clangd clang-format xvfb
       - uses: jurplel/install-qt-action@v4
         with:
           version: '6.10.*'
@@ -91,9 +91,10 @@ jobs:
           export LDAI_OUTPUT=D3RCode-linux-x86_64.AppImage
           ./linuxdeploy-x86_64.AppImage --appdir AppDir -d packaging/d3r-code.desktop -i AppDir/usr/share/icons/hicolor/256x256/apps/d3r-code.png \
             --plugin qt --output appimage
-      - name: Smoke test (AppImage, окно без экрана, выход через 8 с)
+      - name: Smoke test (AppImage на виртуальном X, без системного Qt; выход через 8 с)
         run: |
-          QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 APPIMAGE_EXTRACT_AND_RUN=1 timeout 90 ./D3RCode-linux-x86_64.AppImage --smoke 2>&1 | tee smoke.txt
+          QT_FORCE_STDERR_LOGGING=1 APPIMAGE_EXTRACT_AND_RUN=1 timeout 90 xvfb-run -a env -u QT_PLUGIN_PATH -u QML2_IMPORT_PATH -u LD_LIBRARY_PATH \
+            ./D3RCode-linux-x86_64.AppImage --smoke 2>&1 | tee smoke.txt
           grep -q 'SMOKE OK' smoke.txt
       - uses: actions/upload-artifact@v4
         with:
