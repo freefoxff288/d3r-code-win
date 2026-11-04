@@ -1,0 +1,116 @@
+# Сборка D3R Code: Windows (.exe + Qt в zip) и Linux (AppImage). На каждой — самопроверка C++-части и запуск окна.
+# Тег v* → оба файла прикрепляются к GitHub Release.
+name: build
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.*'
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Build
+        run: |
+          cmake -S . -B build
+          cmake --build build --config Release
+      - name: Deploy
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist/D3RCode | Out-Null
+          Copy-Item build/Release/D3RCode.exe dist/D3RCode/
+          windeployqt --release --qmldir qml --no-translations dist/D3RCode/D3RCode.exe
+          # рантайм MSVC рядом с .exe — чтобы не ставить vc_redist
+          foreach ($d in 'msvcp140.dll','msvcp140_1.dll','vcruntime140.dll','vcruntime140_1.dll') { Copy-Item "$env:WINDIR/System32/$d" dist/D3RCode/ }
+          Copy-Item README.md, LICENSE dist/D3RCode/
+      - name: Selftest (подсветка, файлы, процессы, g++, clangd, Python)
+        shell: pwsh
+        run: |
+          $p = Start-Process dist/D3RCode/D3RCode.exe -ArgumentList '--selftest' -PassThru -NoNewWindow -RedirectStandardOutput selftest.txt
+          if (-not $p.WaitForExit(300000)) { $p.Kill(); throw "самопроверка зависла" }
+          Get-Content selftest.txt -Encoding utf8
+          if ($p.ExitCode -ne 0) { throw "самопроверка: код $($p.ExitCode)" }
+      - name: Smoke test (окно, загрузка QML, выход через 8 с)
+        shell: pwsh
+        run: |
+          $env:QT_FORCE_STDERR_LOGGING = '1'
+          $p = Start-Process dist/D3RCode/D3RCode.exe -ArgumentList '--smoke' -PassThru -NoNewWindow -RedirectStandardError smoke.txt
+          if (-not $p.WaitForExit(90000)) { $p.Kill(); throw "не закрылся за 90 с" }
+          Get-Content smoke.txt -Encoding utf8
+          if ($p.ExitCode -ne 0) { throw "код выхода $($p.ExitCode)" }
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive dist/D3RCode D3RCode-windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: D3RCode-windows-x64
+          path: D3RCode-windows-x64.zip
+
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Пакеты (сборка, xcb для AppImage, g++/clangd для самопроверки)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
+            libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libfuse2 clangd clang-format
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.*'
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          modules: qtwayland
+          cache: true
+      - name: Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+      - name: Selftest
+        run: QT_QPA_PLATFORM=offscreen ./build/D3RCode --selftest
+      - name: AppImage
+        run: |
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
+          mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps
+          cp build/D3RCode AppDir/usr/bin/
+          cp qml/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/d3r-code.png
+          export QMAKE=$QT_ROOT_DIR/bin/qmake QML_SOURCES_PATHS=$PWD/qml EXTRA_PLATFORM_PLUGINS=libqwayland.so APPIMAGE_EXTRACT_AND_RUN=1
+          export LDAI_OUTPUT=D3RCode-linux-x86_64.AppImage
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir -d packaging/d3r-code.desktop -i AppDir/usr/share/icons/hicolor/256x256/apps/d3r-code.png \
+            --plugin qt --output appimage
+      - name: Smoke test (AppImage, окно без экрана, выход через 8 с)
+        run: |
+          QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 APPIMAGE_EXTRACT_AND_RUN=1 timeout 90 ./D3RCode-linux-x86_64.AppImage --smoke 2>&1 | tee smoke.txt
+          grep -q 'SMOKE OK' smoke.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: D3RCode-linux-x86_64
+          path: D3RCode-linux-x86_64.AppImage
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            D3RCode-windows-x64.zip
+            D3RCode-linux-x86_64.AppImage

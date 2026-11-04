@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=D3R Code
+Comment=Редактор кода C++ и Python
+Exec=D3RCode %F
+Icon=d3r-code
+Terminal=false
+Categories=Development;IDE;TextEditor;
+MimeType=text/x-c++src;text/x-c++hdr;text/x-csrc;text/x-chdr;text/x-python;text/plain;
+StartupWMClass=D3RCode

@@ -17,6 +17,16 @@
    - CMake: `winget install -e --id Kitware.CMake`.
 4. Поставил что-то, пока редактор открыт? Нажми **настройки → инструменты → «обновить»**, перезапускать не нужно.
 
+### Linux
+
+Скачай `D3RCode-linux-x86_64.AppImage` из [Releases](../../releases), сделай файл исполняемым и запусти:
+```
+chmod +x D3RCode-linux-x86_64.AppImage && ./D3RCode-linux-x86_64.AppImage
+```
+Qt уже внутри AppImage. g++, clangd, clang-format, cmake и python редактор берёт из системы,
+например `sudo pacman -S gcc clang cmake python` или `sudo apt install g++ clangd clang-format cmake python3`.
+Если не хватает libfuse2, запусти так: `./D3RCode-linux-x86_64.AppImage --appimage-extract-and-run`.
+
 ## Что умеет
 
 - **Подсветка** в цветах Visual Studio: ключевые слова, управление, функции, переменные, типы, строки, escape-последовательности, числа, макросы и препроцессор.
@@ -55,7 +65,7 @@ build\Release\D3RCode.exe --selftest
 ```
 
 `--selftest` проверяет C++-часть: подсветку, файлы, процессы, g++, clangd и Python. `--smoke` открывает окно и закрывается через 8 секунд.
-Код собирается и на Linux, так удобнее разрабатывать. GitHub Actions собирает zip на каждый push, а на тег `v*` выкладывает релиз.
+Код собирается и на Linux, так удобнее разрабатывать. GitHub Actions на каждый push собирает zip для Windows и AppImage для Linux, а на тег `v*` выкладывает оба в релиз.
 
 ## Как устроено
 
