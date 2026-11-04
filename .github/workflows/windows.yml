@@ -1,0 +1,60 @@
+# Сборка D3R Code для Windows: .exe + Qt в одном zip. Самопроверка C++-части (g++, clangd, Python есть на windows-latest)
+# и запуск окна. Тег v* → zip прикрепляется к GitHub Release.
+name: windows
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.*'
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Build
+        run: |
+          cmake -S . -B build
+          cmake --build build --config Release
+      - name: Deploy
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist/D3RCode | Out-Null
+          Copy-Item build/Release/D3RCode.exe dist/D3RCode/
+          windeployqt --release --qmldir qml --no-translations dist/D3RCode/D3RCode.exe
+          # рантайм MSVC рядом с .exe — чтобы не ставить vc_redist
+          foreach ($d in 'msvcp140.dll','msvcp140_1.dll','vcruntime140.dll','vcruntime140_1.dll') { Copy-Item "$env:WINDIR/System32/$d" dist/D3RCode/ }
+          Copy-Item README.md, LICENSE dist/D3RCode/
+      - name: Selftest (подсветка, файлы, процессы, g++, clangd, Python)
+        shell: pwsh
+        run: |
+          $p = Start-Process dist/D3RCode/D3RCode.exe -ArgumentList '--selftest' -PassThru -NoNewWindow -RedirectStandardOutput selftest.txt
+          if (-not $p.WaitForExit(300000)) { $p.Kill(); throw "самопроверка зависла" }
+          Get-Content selftest.txt -Encoding utf8
+          if ($p.ExitCode -ne 0) { throw "самопроверка: код $($p.ExitCode)" }
+      - name: Smoke test (окно, загрузка QML, выход через 8 с)
+        shell: pwsh
+        run: |
+          $p = Start-Process dist/D3RCode/D3RCode.exe -ArgumentList '--smoke' -PassThru
+          if (-not $p.WaitForExit(90000)) { $p.Kill(); throw "не закрылся за 90 с" }
+          if ($p.ExitCode -ne 0) { throw "код выхода $($p.ExitCode)" }
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive dist/D3RCode D3RCode-windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: D3RCode-windows-x64
+          path: D3RCode-windows-x64.zip
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: D3RCode-windows-x64.zip

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+ <defs><radialGradient id="glow" cx="32" cy="32" r="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3056e0" stop-opacity="0.30"/><stop offset="1" stop-color="#3056e0" stop-opacity="0"/></radialGradient></defs>
+ <rect x="2" y="2" width="60" height="60" rx="14" fill="#050b24" stroke="#16215a" stroke-width="1.5"/>
+ <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#glow)"/>
+ <!-- скобки логотипа -->
+ <g fill="none" stroke="#6898f7" stroke-width="4" stroke-linejoin="round">
+  <path d="M16,12 H13.5 Q10.5,12 10.5,15 V27.5 Q10.5,30.5 7,32 Q10.5,33.5 10.5,36.5 V49 Q10.5,52 13.5,52 H16"/>
+  <path d="M48,12 H50.5 Q53.5,12 53.5,15 V27.5 Q53.5,30.5 57,32 Q53.5,33.5 53.5,36.5 V49 Q53.5,52 50.5,52 H48"/>
+ </g>
+ <path d="M26,24 L19,32 L26,40 M38,24 L45,32 L38,40" fill="none" stroke="#dce6ff" stroke-width="3.4" stroke-linejoin="miter" stroke-linecap="square"/><path d="M35,21 L29,43" fill="none" stroke="#6898f7" stroke-width="3.4" stroke-linejoin="miter" stroke-linecap="square"/>
+</svg>
