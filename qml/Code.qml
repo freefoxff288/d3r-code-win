@@ -41,7 +41,7 @@ Window {
     readonly property string exe: Sys.windows ? ".exe" : ""
     readonly property bool maxed: visibility === Window.Maximized || visibility === Window.FullScreen
     // пути — с прямыми слешами: C:/Users/... (так их отдаёт Qt); корень диска «C:/»
-    function short(p) { return p && p.startsWith(home) ? "~" + p.slice(home.length) : (p || ""); }
+    function shortPath(p) { return p && p.startsWith(home) ? "~" + p.slice(home.length) : (p || ""); }
     function dirOf(p) { const d = p.replace(/\/[^\/]*$/, ""); return /^[A-Za-z]:$/.test(d) ? d + "/" : d || "/"; }
     function baseName(p) { return p.replace(/\/+$/, "").split("/").pop() || p; }
     function stem(p) { return baseName(p).replace(/\.[^.]*$/, ""); }
@@ -152,7 +152,7 @@ Window {
         if (!e.path) { saveAs(i, done); return; }
         e.save(ok => {
             if (ok) { flashSaved(); check(e); if (e.name === "CMakeLists.txt") scanProject(); }
-            else toast("не удалось записать " + short(e.path), "error");
+            else toast("не удалось записать " + shortPath(e.path), "error");
             if (done) done(ok);
         });
     }
@@ -340,7 +340,7 @@ Window {
             if (busy) { say(t + "\n"); Sys.send(procId, t + "\n"); return; }
             const c = t.trim();
             if (!c) return;
-            say("\n" + short(cwd) + "> " + c + "\n");
+            say("\n" + shortPath(cwd) + "> " + c + "\n");
             if (/^(cls|clear)$/i.test(c)) { clear(); return; }
             const cd = c.match(/^cd(?:\s+\/d)?\s+(.+)$/i);
             if (cd) {
@@ -379,8 +379,8 @@ Window {
     function treeMenu(p, isDir, pos) {
         const dir = isDir ? p : dirOf(p);
         menu.show(pos, [
-            ["󰝒  Новый файл", () => prompt("Новый файл в " + short(dir), "", n => createFile(dir + "/" + n))],
-            ["󰉗  Новая папка", () => prompt("Новая папка в " + short(dir), "", n => { if (Sys.mkdir(join(dir, n))) { win.expanded[dir] = true; win.treeRev++; } else toast("не получилось создать папку", "error"); })],
+            ["󰝒  Новый файл", () => prompt("Новый файл в " + shortPath(dir), "", n => createFile(dir + "/" + n))],
+            ["󰉗  Новая папка", () => prompt("Новая папка в " + shortPath(dir), "", n => { if (Sys.mkdir(join(dir, n))) { win.expanded[dir] = true; win.treeRev++; } else toast("не получилось создать папку", "error"); })],
             ["󰑕  Переименовать", () => prompt("Новое имя", baseName(p), n => {
                 const np = join(dirOf(p), n);
                 if (!Sys.rename(p, np)) { toast("не получилось: «" + n + "» уже есть или файл занят", "warn"); return; }
@@ -423,7 +423,7 @@ Window {
             ["main.py", "def main():\n    print(\"present day, present time\")\n\n\nif __name__ == \"__main__\":\n    main()\n"],
             [".gitignore", "__pycache__/\n.venv/\n"]
         ];
-        if (Sys.exists(dir)) { toast("папка " + short(dir) + " уже есть — выбери другое имя", "warn"); return; }
+        if (Sys.exists(dir)) { toast("папка " + shortPath(dir) + " уже есть — выбери другое имя", "warn"); return; }
         for (const f of files) if (!Sys.write(dir + "/" + f[0], f[1])) { toast("не получилось записать " + f[0], "error"); return; }
         newProj.open = false;
         openProject(dir);
@@ -982,7 +982,7 @@ Window {
                     Text {
                         x: 14; y: 58; width: parent.width - 28; elide: Text.ElideMiddle
                         font.family: win.mono; font.pixelSize: cfg.uiSize - 3; color: pal.faint
-                        text: win.short(cfg.project) + (win.cmakeExe ? "  · cmake" : "")
+                        text: win.shortPath(cfg.project) + (win.cmakeExe ? "  · cmake" : "")
                     }
                     Flickable {
                         id: treeFlick
@@ -1073,7 +1073,7 @@ Window {
                                         color: rcm.containsMouse ? Qt.alpha(pal.head, 0.9) : "transparent"
                                         Text { x: 12; anchors.verticalCenter: parent.verticalCenter; font.family: win.mono; font.pixelSize: cfg.uiSize
                                                textFormat: Text.StyledText; color: pal.text
-                                               text: "<font color='" + pal.acc + "'>󰉋</font>  " + win.baseName(parent.modelData) + "  <font color='" + pal.faint + "'>" + win.short(parent.modelData) + "</font>" }
+                                               text: "<font color='" + pal.acc + "'>󰉋</font>  " + win.baseName(parent.modelData) + "  <font color='" + pal.faint + "'>" + win.shortPath(parent.modelData) + "</font>" }
                                         MouseArea { id: rcm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.openProject(parent.modelData) }
                                     }
                                 }
@@ -1144,7 +1144,7 @@ Window {
                     Rectangle { y: 1; width: parent.width; height: parent.height - 1; color: Qt.alpha(pal.bg, 0.6) }
                     Text {
                         x: 14; y: 6; font.family: win.mono; font.pixelSize: cfg.uiSize - 2; textFormat: Text.StyledText; color: pal.dim
-                        text: "<b><font color='" + pal.acc + "'>CONSOLE</font></b> // " + win.short(con.cwd) + (con.busy ? "<font color='" + win.green + "'>   ● работает</font>" : "") +
+                        text: "<b><font color='" + pal.acc + "'>CONSOLE</font></b> // " + win.shortPath(con.cwd) + (con.busy ? "<font color='" + win.green + "'>   ● работает</font>" : "") +
                               "<font color='" + pal.faint + "'>   · Ctrl+клик по ошибке — к строке</font>"
                     }
                     Row {
@@ -1452,7 +1452,7 @@ Window {
                               const e = win.curEd; if (e && e.selLen > 0 && e.area.selectedText.indexOf("\n") < 0) searchField.input.text = e.area.selectedText; }
             anchors.horizontalCenter: parent.horizontalCenter; y: bar.height + 30
             width: Math.min(820, parent.width - 80); height: Math.min(520, parent.height - 90)
-            Field { id: searchField; width: parent.width; hint: "текст во всех файлах " + win.short(win.searchRoot) + "…"
+            Field { id: searchField; width: parent.width; hint: "текст во всех файлах " + win.shortPath(win.searchRoot) + "…"
                     onChanged: searchTimer.restart()
                     onAccepted: { const h = win.hits[hitList.currentIndex]; if (h) win.openHit(h); }
                     onDownPressed: hitList.incrementCurrentIndex()
